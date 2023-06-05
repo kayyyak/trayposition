@@ -59,6 +59,7 @@ float32_t holePositionsCartesianadded[18];
 //-------------------------------------------------
 //joy stick----------------------------------------
 uint64_t _micros = 0;
+int64_t currentTime = 0;
 ModbusHandleTypedef hmodbus;
 u16u8_t registerFrame[200];
 uint32_t adcRawData[20];
@@ -85,6 +86,7 @@ static void MX_TIM5_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 //nine holes of tray----------------------------------------------------------------
+void SetTwoPointsForCalibrate();
 void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegrees);
 //----------------------------------------------------------------------------------
 //joy stick-------------------------------------------------------------------------
@@ -137,11 +139,13 @@ int main(void)
   //nine holes of tray-----------------
   //here for change x,y,degrees--------
   float32_t test[2] = {0,0};
+  SetTwoPointsForCalibrate();
   HolePositionsCartesian(test, 0);
   //-----------------------------------
   //joy stick--------------------------
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawData, 20);
   HAL_TIM_Base_Start(&htim1);
+  HAL_TIM_Base_Start(&htim5);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   hmodbus.huart = &huart2;
   hmodbus.htim = &htim11;
@@ -162,12 +166,12 @@ int main(void)
 	  JoyStickControlCartesian();
 
 	  static uint32_t timestamp = 0;
-	  int64_t currentTime = micros();
+	  currentTime = micros();
 	  if(currentTime > timestamp)
 	  {
 		  timestamp = currentTime + 200000; //200000 microsecond = 0.2 --> 200 millisecond
 
-		  registerFrame[0] = 0101100101100001; //Ya 22881
+		  registerFrame[0].U16 = 0b0101100101100001; //Ya 22881
 	  }
     /* USER CODE END WHILE */
 
@@ -556,6 +560,10 @@ uint64_t micros()
 {
 	return __HAL_TIM_GET_COUNTER(&htim5) + _micros;
 }
+void SetTwoPointsForCalibrate()
+{
+
+}
 void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegrees)
 {
     static float32_t holePositionsRelativetoBottomLeft[18] =
@@ -592,6 +600,7 @@ void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegree
         holePositionsCartesian[i*2+1] = (holePositionsCartesianadded[i*2] * rotationMatrix[1]) + (holePositionsCartesianadded[i*2+1] * rotationMatrix[3]);
     }
 }
+//-------------------------------------------------------------------------------------------------------------------------------------
 void GetJoystickXYaxisValue()
 {
 	JoyStickSwitch = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1);
@@ -637,6 +646,7 @@ void JoyStickControlCartesian()
 
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, PulseWidthModulation);
 }
+//-------------------------------------------------------------------------------------------------------------------------------------
 /* USER CODE END 4 */
 
 /**

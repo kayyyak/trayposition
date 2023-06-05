@@ -157,16 +157,18 @@ int main(void)
   {
 	  Modbus_Protocal_Worker();
 
-//	  static uint32_t timestamp = 0;
-//	  int64_t currentTime = micros();
-//	  if(currentTime > timestamp)
-//	  {
-//		  timestamp = currentTime + 1000; //1000 microsecond = 0.001 second = 1000Hz
+	  GetJoystickXYaxisValue();
 
-		  GetJoystickXYaxisValue();
+	  JoyStickControlCartesian();
 
-		  JoyStickControlCartesian();
-//	  }
+	  static uint32_t timestamp = 0;
+	  int64_t currentTime = micros();
+	  if(currentTime > timestamp)
+	  {
+		  timestamp = currentTime + 200000; //200000 microsecond = 0.2 --> 200 millisecond
+
+		  registerFrame[0] = 0101100101100001; //Ya 22881
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

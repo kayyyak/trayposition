@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "arm_math.h"
 #include "ModBusRTU.h"
+#include "stm32f4xx_hal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +44,7 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim11;
 
@@ -67,7 +69,8 @@ int X_axis = 0;
 int Y_axis = 0;
 int joystickXaxis = 0;
 int joystickYaxis = 0;
-float PulseWithModuation = 0;
+float PulseWidthModulation = 0;
+int check = 0;
 //-------------------------------------------------
 /* USER CODE END PV */
 
@@ -79,6 +82,7 @@ static void MX_ADC1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM11_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 //nine holes of tray----------------------------------------------------------------
 void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegrees);
@@ -128,6 +132,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM11_Init();
   MX_TIM5_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   //nine holes of tray-----------------
   //here for change x,y,degrees--------
@@ -136,6 +141,8 @@ int main(void)
   //-----------------------------------
   //joy stick--------------------------
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawData, 20);
+  HAL_TIM_Base_Start(&htim1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   hmodbus.huart = &huart2;
   hmodbus.htim = &htim11;
   hmodbus.slaveAddress = 0x15;
@@ -271,6 +278,81 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 0;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 49999;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
 
 }
 
@@ -437,7 +519,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -451,12 +533,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
+  /*Configure GPIO pins : LD2_Pin PA11 */
+  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
@@ -507,7 +589,6 @@ void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegree
         holePositionsCartesian[i*2] = (holePositionsCartesianadded[i*2] * rotationMatrix[0]) + (holePositionsCartesianadded[i*2+1] * rotationMatrix[2]);
         holePositionsCartesian[i*2+1] = (holePositionsCartesianadded[i*2] * rotationMatrix[1]) + (holePositionsCartesianadded[i*2+1] * rotationMatrix[3]);
     }
-
 }
 void GetJoystickXYaxisValue()
 {
@@ -519,49 +600,40 @@ void GetJoystickXYaxisValue()
 		{
 			IN1[i/2] = adcRawData[i];
 			Y_axis += IN1[i/2];
-			if(i == 18)
-			{
-				joystickYaxis = Y_axis/10;
-			}
+			if(i == 18){joystickYaxis = Y_axis/10;}
 		}
 		else if(i % 2 == 1)
 		{
 			IN0[(i-1)/2] = adcRawData[i];
 			X_axis += IN0[(i-1)/2];
-			if(i == 19)
-			{
-				joystickXaxis = X_axis/10;
-			}
+			if(i == 19){joystickXaxis = X_axis/10;}
 		}
-	} X_axis = 0;  Y_axis = 0;
+	} X_axis = 0; Y_axis = 0;
 }
 
 void JoyStickControlCartesian()
 {
-	if(joystickXaxis > 3120) //left
-	{
-		for(int i; i >= 1400; i++)
-		{
-			registerFrame[65].U16 = i;
-		}
-		//if press to long it will go forward
-	}
-	else if(joystickXaxis < 3000) //right
-	{
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
 
-	}
-	if(joystickYaxis < 3000) //front
-	{
-		PulseWithModuation = 1000;
-	}
-	else if(joystickYaxis > 3100) //back
-	{
-		PulseWithModuation = -1000;
-	}
-	if(joystickXaxis > 3090 && joystickXaxis < 3110 && joystickYaxis > 3020 && joystickYaxis < 3040)
-	{
-		PulseWithModuation = 0;
-	}
+	//X-axis
+	if(joystickXaxis > 2500) //Left
+	{registerFrame[64].U16 = 4;}
+
+	else if(joystickXaxis < 1900) //Right
+	{registerFrame[64].U16 = 8;}
+
+	else{registerFrame[64].U16 = 0;}
+
+	//Y-axis
+	if(joystickYaxis < 1900) //Front
+	{PulseWidthModulation = 1000;}
+
+	else if(joystickYaxis > 2500) //Back
+	{PulseWidthModulation = -1000;}
+
+	else{PulseWidthModulation = 0;}
+
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, PulseWidthModulation);
 }
 /* USER CODE END 4 */
 

@@ -18,12 +18,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "arm_math.h"
 #include "ModBusRTU.h"
 #include "stm32f4xx_hal.h"
+#include "holePositionsCartesian.h"
+#include "joyStick.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,7 +54,6 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 //nine holes of tray-------------------------------
-int test;
 int reference[2] = {0, 0};
 int opposite[2] = {0, 0};
 float32_t rotationAngleRadian = 0;
@@ -64,7 +64,6 @@ float32_t holePositionsCartesianrotation[18];
 float32_t holePositionsCartesianadded[18];
 //-------------------------------------------------
 //joy stick----------------------------------------
-uint64_t _micros = 0;
 int64_t currentTime = 0;
 ModbusHandleTypedef hmodbus;
 u16u8_t registerFrame[200];
@@ -72,14 +71,10 @@ uint32_t adcRawData[20];
 uint32_t IN0[10]; //Y
 uint32_t IN1[10]; //X
 int JoyStickSwitch = 0;
-int X_axis = 0;
-int Y_axis = 0;
-int joystickXaxis = 0;
-int joystickYaxis = 0;
+int X_axis, Y_axis;
+int joystickXaxis, joystickYaxis;
 float PulseWidthModulation = 0;
-int check = 0;
-float encoderX = 0;
-float encoderY = 0;
+float encoderX, encoderY;
 //-------------------------------------------------
 /* USER CODE END PV */
 
@@ -93,15 +88,7 @@ static void MX_TIM11_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
-//nine holes of tray----------------------------------------------------------------
-void SetTwoPointsForCalibrate();
-void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleRadian);
-//----------------------------------------------------------------------------------
-//joy stick-------------------------------------------------------------------------
-inline uint64_t micros();
-void GetJoystickXYaxisValue();
-void JoyStickControlCartesian();
-//----------------------------------------------------------------------------------
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -557,162 +544,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_TIM_PeriodElasedCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim == &htim5)
-	{
-		_micros += UINT32_MAX;
-	}
-}
-uint64_t micros()
-{
-	return __HAL_TIM_GET_COUNTER(&htim5) + _micros;
-}
-void swap(int* a, int* b)
-{
-    int temp = *a;
-    *a = *b;
-    *b = temp;
-}
-void SetTwoPointsForCalibrate()
-{
-	int x0 = 178, y0 = 100, x1 = 100, y1 = 100; //laser will give two points of tray
-//	float32_t distancebetweenpoints = sqrt(pow(x0 - x1, 2) + pow(y0 - y1, 2));
-//	x1 = x0 + distancebetweenpoints * cos((atan(50.0 / 60) + thata) * M_PI / 180);
-//	y1 = y0 + distancebetweenpoints * sin((atan(50.0 / 60) + thata) * M_PI / 180);
 
-	if(y0 > y1){swap(&x0, &x1); swap(&y0, &y1);}
-	else if(y0 == y1)
-	{
-		if (x0 > x1){swap(&x0, &x1); swap(&y0, &y1);}
-	}
-
-	reference[0] = x0; reference[1] = y0;
-	opposite[0] = x1; opposite[1] = y1;
-
-	rotationAngleRadian = (atan2(y1 - y0, x1 - x0) - atan2(50, 60));
-	Degrees = rotationAngleRadian * (180 / M_PI);
-}
-void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleRadian)
-{
-    static float32_t holePositionsRelativetoBottomLeft[18] =
-    {
-        10, 10,
-        30, 10,
-        50, 10,
-        10, 25,
-        30, 25,
-        50, 25,
-        10, 40,
-        30, 40,
-        50, 40
-    };
-
-    float32_t rotationMatrix[4] =
-    {
-    	arm_cos_f32(rotationAngleRadian),  //0
-		arm_sin_f32(rotationAngleRadian),  //1
-		-arm_sin_f32(rotationAngleRadian), //2
-		arm_cos_f32(rotationAngleRadian)   //3
-    };
-
-    test = bottomleft[0];
-
-    for (int i = 0; i < 9; i++)
-    {
-    	//rotation
-    	holePositionsCartesianrotation[i*2] = (holePositionsRelativetoBottomLeft[i*2] * rotationMatrix[0]) + (holePositionsRelativetoBottomLeft[i*2+1] * rotationMatrix[2]);
-    	holePositionsCartesianrotation[i*2+1] = (holePositionsRelativetoBottomLeft[i*2] * rotationMatrix[1]) + (holePositionsRelativetoBottomLeft[i*2+1] * rotationMatrix[3]);
-
-    	//translation
-    	holePositionsCartesian[i*2] = holePositionsCartesianrotation[i*2] + bottomleft[0];
-    	holePositionsCartesian[i*2+1] = holePositionsCartesianrotation[i*2+1] + bottomleft[1];
-    }
-}
-//-------------------------------------------------------------------------------------------------------------------------------------
-void GetJoystickXYaxisValue()
-{
-	int before;
-	int trayPosition = 0;
-	unsigned long StartTime = 0;
-	unsigned long currentTime = 0;
-
-	JoyStickSwitch = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1);
-
-	if (JoyStickSwitch == 0)
-	{
-		if (before == 1 && JoyStickSwitch == 0)
-		{
-			// Keep encoder position xy
-			registerFrame[32].U16 = 0; //encoderx
-			registerFrame[33].U16 = 0; //encodery
-		}
-		else if (before == 0 && JoyStickSwitch == 0)
-		{
-			if (before == 1)
-			{
-				StartTime = micros();
-				JoyStickSwitch = 0;
-			}
-			else
-			{
-				currentTime = micros();
-				if ((currentTime - StartTime) >= 2000000)
-				{
-					//set home and encoder x y = 0
-					registerFrame[1].U16 = 2; //encoderx //set home x-axis
-					registerFrame[33].U16 = 0; //encodery
-				}
-			}
-		}before = JoyStickSwitch;
-	}
-	else
-	{
-		JoyStickSwitch = 1;
-	}
-
-	for(int i = 0; i < 20; i++)
-	{
-		if(i % 2 == 0)
-		{
-			IN1[i/2] = adcRawData[i];
-			Y_axis += IN1[i/2];
-			if(i == 18){joystickYaxis = Y_axis/10;}
-		}
-		else if(i % 2 == 1)
-		{
-			IN0[(i-1)/2] = adcRawData[i];
-			X_axis += IN0[(i-1)/2];
-			if(i == 19){joystickXaxis = X_axis/10;}
-		}
-	} X_axis = 0; Y_axis = 0;
-}
-
-void JoyStickControlCartesian()
-{
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
-
-	//X-axis
-	if(joystickXaxis > 2500) //Left
-	{registerFrame[64].U16 = 4;}
-
-	else if(joystickXaxis < 1900) //Right
-	{registerFrame[64].U16 = 8;}
-
-	else{registerFrame[64].U16 = 0;}
-
-	//Y-axis
-	if(joystickYaxis < 1900) //Front
-	{PulseWidthModulation = 1000;}
-
-	else if(joystickYaxis > 2500) //Back
-	{PulseWidthModulation = -1000;}
-
-	else{PulseWidthModulation = 0;}
-
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, PulseWidthModulation);
-}
-//-------------------------------------------------------------------------------------------------------------------------------------
 /* USER CODE END 4 */
 
 /**

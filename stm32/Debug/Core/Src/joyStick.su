@@ -1,0 +1,4 @@
+../Core/Src/joyStick.c:26:6:GetJoystickXYaxisValue	24	static
+../Core/Src/joyStick.c:83:6:JoyStickControlCartesian	8	static
+../Core/Src/joyStick.c:108:6:HAL_TIM_PeriodElasedCallback	24	static
+../Core/Src/joyStick.c:116:10:micros	12	static

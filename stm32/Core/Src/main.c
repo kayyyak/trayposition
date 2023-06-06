@@ -53,8 +53,14 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 //nine holes of tray-------------------------------
+int test;
+int reference[2] = {0, 0};
+int opposite[2] = {0, 0};
+float32_t rotationAngleRadian = 0;
+float32_t Degrees = 0;
 float32_t *matrixtest;
 float32_t holePositionsCartesian[18];
+float32_t holePositionsCartesianrotation[18];
 float32_t holePositionsCartesianadded[18];
 //-------------------------------------------------
 //joy stick----------------------------------------
@@ -87,7 +93,7 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 //nine holes of tray----------------------------------------------------------------
 void SetTwoPointsForCalibrate();
-void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegrees);
+void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleRadian);
 //----------------------------------------------------------------------------------
 //joy stick-------------------------------------------------------------------------
 inline uint64_t micros();
@@ -138,9 +144,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //nine holes of tray-----------------
   //here for change x,y,degrees--------
-  float32_t test[2] = {0,0};
   SetTwoPointsForCalibrate();
-  HolePositionsCartesian(test, 0);
+  float32_t xy_axis[2] = {reference[0], reference[1]};
+  HolePositionsCartesian(xy_axis, rotationAngleRadian);
   //-----------------------------------
   //joy stick--------------------------
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawData, 20);
@@ -560,11 +566,32 @@ uint64_t micros()
 {
 	return __HAL_TIM_GET_COUNTER(&htim5) + _micros;
 }
+void swap(int* a, int* b)
+{
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
 void SetTwoPointsForCalibrate()
 {
+	int x0 = 178, y0 = 100, x1 = 100, y1 = 100; //laser will give two points of tray
+//	float32_t distancebetweenpoints = sqrt(pow(x0 - x1, 2) + pow(y0 - y1, 2));
+//	x1 = x0 + distancebetweenpoints * cos((atan(50.0 / 60) + thata) * M_PI / 180);
+//	y1 = y0 + distancebetweenpoints * sin((atan(50.0 / 60) + thata) * M_PI / 180);
 
+	if(y0 > y1){swap(&x0, &x1); swap(&y0, &y1);}
+	else if(y0 == y1)
+	{
+		if (x0 > x1){swap(&x0, &x1); swap(&y0, &y1);}
+	}
+
+	reference[0] = x0; reference[1] = y0;
+	opposite[0] = x1; opposite[1] = y1;
+
+	rotationAngleRadian = (atan2(y1 - y0, x1 - x0) - atan2(50, 60));
+	Degrees = rotationAngleRadian * (180 / M_PI);
 }
-void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegrees)
+void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleRadian)
 {
     static float32_t holePositionsRelativetoBottomLeft[18] =
     {
@@ -579,25 +606,25 @@ void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleDegree
         50, 40
     };
 
-    // Convert rotation angle to radians
-    float32_t rotationAngleRadian = rotationAngleDegrees * (PI / 180.0);
     float32_t rotationMatrix[4] =
     {
-    		arm_cos_f32(rotationAngleRadian),   //0
-			-arm_sin_f32(rotationAngleRadian),  //1
-			arm_sin_f32(rotationAngleRadian),   //2
-			arm_cos_f32(rotationAngleRadian)    //3
+    	arm_cos_f32(rotationAngleRadian),  //0
+		arm_sin_f32(rotationAngleRadian),  //1
+		-arm_sin_f32(rotationAngleRadian), //2
+		arm_cos_f32(rotationAngleRadian)   //3
     };
+
+    test = bottomleft[0];
 
     for (int i = 0; i < 9; i++)
     {
-    	//xy
-    	holePositionsCartesianadded[i*2] = holePositionsRelativetoBottomLeft[i*2] + bottomleft[0];
-    	holePositionsCartesianadded[i*2+1] = holePositionsRelativetoBottomLeft[i*2+1] + bottomleft[1];
+    	//rotation
+    	holePositionsCartesianrotation[i*2] = (holePositionsRelativetoBottomLeft[i*2] * rotationMatrix[0]) + (holePositionsRelativetoBottomLeft[i*2+1] * rotationMatrix[2]);
+    	holePositionsCartesianrotation[i*2+1] = (holePositionsRelativetoBottomLeft[i*2] * rotationMatrix[1]) + (holePositionsRelativetoBottomLeft[i*2+1] * rotationMatrix[3]);
 
-    	//degrees
-        holePositionsCartesian[i*2] = (holePositionsCartesianadded[i*2] * rotationMatrix[0]) + (holePositionsCartesianadded[i*2+1] * rotationMatrix[2]);
-        holePositionsCartesian[i*2+1] = (holePositionsCartesianadded[i*2] * rotationMatrix[1]) + (holePositionsCartesianadded[i*2+1] * rotationMatrix[3]);
+    	//translation
+    	holePositionsCartesian[i*2] = holePositionsCartesianrotation[i*2] + bottomleft[0];
+    	holePositionsCartesian[i*2+1] = holePositionsCartesianrotation[i*2+1] + bottomleft[1];
     }
 }
 //-------------------------------------------------------------------------------------------------------------------------------------

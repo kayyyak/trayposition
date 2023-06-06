@@ -78,6 +78,8 @@ int joystickXaxis = 0;
 int joystickYaxis = 0;
 float PulseWidthModulation = 0;
 int check = 0;
+float encoderX = 0;
+float encoderY = 0;
 //-------------------------------------------------
 /* USER CODE END PV */
 
@@ -630,7 +632,44 @@ void HolePositionsCartesian(float32_t* bottomleft, float32_t rotationAngleRadian
 //-------------------------------------------------------------------------------------------------------------------------------------
 void GetJoystickXYaxisValue()
 {
+	int before;
+	int trayPosition = 0;
+	unsigned long StartTime = 0;
+	unsigned long currentTime = 0;
+
 	JoyStickSwitch = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1);
+
+	if (JoyStickSwitch == 0)
+	{
+		if (before == 1 && JoyStickSwitch == 0)
+		{
+			// Keep encoder position xy
+			registerFrame[32].U16 = 0; //encoderx
+			registerFrame[33].U16 = 0; //encodery
+		}
+		else if (before == 0 && JoyStickSwitch == 0)
+		{
+			if (before == 1)
+			{
+				StartTime = micros();
+				JoyStickSwitch = 0;
+			}
+			else
+			{
+				currentTime = micros();
+				if ((currentTime - StartTime) >= 2000000)
+				{
+					//set home and encoder x y = 0
+					registerFrame[1].U16 = 2; //encoderx //set home x-axis
+					registerFrame[33].U16 = 0; //encodery
+				}
+			}
+		}before = JoyStickSwitch;
+	}
+	else
+	{
+		JoyStickSwitch = 1;
+	}
 
 	for(int i = 0; i < 20; i++)
 	{

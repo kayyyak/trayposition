@@ -12,6 +12,6 @@
 ../Core/Src/main.c:569:6:swap	24	static
 ../Core/Src/main.c:575:6:SetTwoPointsForCalibrate	32	static
 ../Core/Src/main.c:594:6:HolePositionsCartesian	40	static
-../Core/Src/main.c:631:6:GetJoystickXYaxisValue	16	static
-../Core/Src/main.c:652:6:JoyStickControlCartesian	8	static
-../Core/Src/main.c:683:6:Error_Handler	4	static,ignoring_inline_asm
+../Core/Src/main.c:631:6:GetJoystickXYaxisValue	24	static
+../Core/Src/main.c:686:6:JoyStickControlCartesian	8	static
+../Core/Src/main.c:717:6:Error_Handler	4	static,ignoring_inline_asm

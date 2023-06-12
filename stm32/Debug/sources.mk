@@ -23,7 +23,6 @@ C_DEPS :=
 SUBDIRS := \
 Core/Src \
 Core/Startup \
-Core \
 DSP/Source/BasicMathFunctions \
 DSP/Source/BayesFunctions \
 DSP/Source/CommonTables \

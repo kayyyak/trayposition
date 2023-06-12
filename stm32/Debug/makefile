@@ -28,7 +28,6 @@ RM := rm -rf
 -include DSP/Source/BasicMathFunctions/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
--include Core/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)

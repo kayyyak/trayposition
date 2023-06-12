@@ -19,10 +19,9 @@ extern int reference[2];
 extern int opposite[2];
 extern int GoalReadyFlag;
 
-
 void SetTwoPointsForCalibrate()
 {
-	int x0 = 0, y0 = 0, x1 = 60, y1 = 50;
+	int x0 = 0, y0 = 0, x1 = 45, y1 = 79;
     reference[0] = x0;
     reference[1] = y0;
     opposite[0] = x1;

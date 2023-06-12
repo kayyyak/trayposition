@@ -23,8 +23,9 @@
 #include "arm_math.h"
 #include "ModBusRTU.h"
 #include "stm32f4xx_hal.h"
-#include "holePositionsCartesian.h"
+//#include "holePositionsCartesian.h"
 #include "joyStick.h"
+#include "nineholes.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,12 +57,14 @@ DMA_HandleTypeDef hdma_usart2_tx;
 //nine holes of tray-------------------------------
 int reference[2] = {0, 0};
 int opposite[2] = {0, 0};
-float32_t rotationAngleRadian = 0;
+float32_t rotated[9][2] = {0};
+float32_t rotationAngle = 0;
 float32_t Degrees = 0;
 float32_t *matrixtest;
-float32_t holePositionsCartesian[18];
-float32_t holePositionsCartesianrotation[18];
-float32_t holePositionsCartesianadded[18];
+//float32_t holePositionsCartesian[18];
+int GoalReadyFlag = 0;
+//float32_t holePositionsCartesianrotation[18];
+//float32_t holePositionsCartesianadded[18];
 //-------------------------------------------------
 //joy stick----------------------------------------
 int64_t currentTime = 0;
@@ -133,9 +136,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //nine holes of tray-----------------
   //here for change x,y,degrees--------
-  SetTwoPointsForCalibrate();
-  float32_t xy_axis[2] = {reference[0], reference[1]};
-  HolePositionsCartesian(xy_axis, rotationAngleRadian);
+//  SetTwoPointsForCalibrate();
+//  float32_t xy_axis[2] = {reference[0], reference[1]};
+//  HolePositionsCartesian(xy_axis, rotationAngle);
   //-----------------------------------
   //joy stick--------------------------
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawData, 20);
@@ -159,6 +162,10 @@ int main(void)
 	  GetJoystickXYaxisValue();
 
 	  JoyStickControlCartesian();
+
+	  SetTwoPointsForCalibrate();
+	  float32_t xy_axis[2] = {reference[0], reference[1]};
+	  HolePositionsCartesian(xy_axis, rotationAngle);
 
 	  static uint32_t timestamp = 0;
 	  currentTime = micros();

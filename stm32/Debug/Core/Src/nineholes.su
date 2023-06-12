@@ -1,0 +1,2 @@
+../Core/Src/nineholes.c:22:6:SetTwoPointsForCalibrate	32	static
+../Core/Src/nineholes.c:64:6:HolePositionsCartesian	32	static

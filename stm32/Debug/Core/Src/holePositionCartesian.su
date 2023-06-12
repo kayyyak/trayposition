@@ -1,3 +1,0 @@
-../Core/Src/holePositionCartesian.c:20:6:swap	24	static
-../Core/Src/holePositionCartesian.c:26:6:SetTwoPointsForCalibrate	32	static
-../Core/Src/holePositionCartesian.c:42:6:HolePositionsCartesian	40	static

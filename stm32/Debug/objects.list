@@ -8,6 +8,7 @@
 "./Core/Src/sysmem.o"
 "./Core/Src/system_stm32f4xx.o"
 "./Core/Startup/startup_stm32f411retx.o"
+"./Core/nineholes.o"
 "./DSP/Source/BasicMathFunctions/BasicMathFunctionsF16.o"
 "./DSP/Source/BasicMathFunctions/arm_abs_f16.o"
 "./DSP/Source/BasicMathFunctions/arm_abs_f32.o"

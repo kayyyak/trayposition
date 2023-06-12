@@ -18,13 +18,16 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "arm_math.h"
 #include "ModBusRTU.h"
 #include "stm32f4xx_hal.h"
-#include "holePositionsCartesian.h"
+//#include "holePositionsCartesian.h"
 #include "joyStick.h"
+#include "nineholes.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,12 +59,16 @@ DMA_HandleTypeDef hdma_usart2_tx;
 //nine holes of tray-------------------------------
 int reference[2] = {0, 0};
 int opposite[2] = {0, 0};
+float32_t nineholes[9][2] = {0};
+float32_t rotated[9][2] = {0};
+float32_t rotationAngle = 0;
 float32_t rotationAngleRadian = 0;
 float32_t Degrees = 0;
 float32_t *matrixtest;
 float32_t holePositionsCartesian[18];
-float32_t holePositionsCartesianrotation[18];
-float32_t holePositionsCartesianadded[18];
+int GoalReadyFlag = 0;
+//float32_t holePositionsCartesianrotation[18];
+//float32_t holePositionsCartesianadded[18];
 //-------------------------------------------------
 //joy stick----------------------------------------
 int64_t currentTime = 0;
@@ -75,6 +82,9 @@ int X_axis, Y_axis;
 int joystickXaxis, joystickYaxis;
 float PulseWidthModulation = 0;
 float encoderX, encoderY;
+//-------------------------------------------------
+//modbus-------------------------------------------
+
 //-------------------------------------------------
 /* USER CODE END PV */
 
@@ -109,7 +119,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -133,9 +143,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //nine holes of tray-----------------
   //here for change x,y,degrees--------
-  SetTwoPointsForCalibrate();
-  float32_t xy_axis[2] = {reference[0], reference[1]};
-  HolePositionsCartesian(xy_axis, rotationAngleRadian);
+//  SetTwoPointsForCalibrate();
+//  float32_t xy_axis[2] = {reference[0], reference[1]};
+//  HolePositionsCartesian(xy_axis, rotationAngle);
   //-----------------------------------
   //joy stick--------------------------
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawData, 20);
@@ -160,6 +170,10 @@ int main(void)
 
 	  JoyStickControlCartesian();
 
+	  SetTwoPointsForCalibrate();
+	  float32_t xy_axis[2] = {reference[0], reference[1]};
+	  HolePositionsCartesian(xy_axis, rotationAngle);
+
 	  static uint32_t timestamp = 0;
 	  currentTime = micros();
 	  if(currentTime > timestamp)
@@ -167,6 +181,7 @@ int main(void)
 		  timestamp = currentTime + 200000; //200000 microsecond = 0.2 --> 200 millisecond
 
 		  registerFrame[0].U16 = 0b0101100101100001; //Ya 22881
+
 	  }
     /* USER CODE END WHILE */
 
@@ -528,11 +543,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PC1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  /*Configure GPIO pin : PA4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD2_Pin PA11 */
   GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_11;

@@ -29,7 +29,7 @@ void GetJoystickXYaxisValue()
 	unsigned long StartTime = 0;
 	unsigned long currentTime = 0;
 
-	JoyStickSwitch = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1);
+	JoyStickSwitch = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4);
 
 	if (JoyStickSwitch == 0)
 	{
@@ -57,10 +57,6 @@ void GetJoystickXYaxisValue()
 				}
 			}
 		}before = JoyStickSwitch;
-	}
-	else
-	{
-		JoyStickSwitch = 1;
 	}
 
 	for(int i = 0; i < 20; i++)
